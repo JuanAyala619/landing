@@ -1,5 +1,6 @@
 "use strict";
-import { fetchProducts } from "./functions.js";
+// Importar las funciones desde functions.js
+import { fetchProducts,fetchCategories } from './functions.js';
 const showToast = () => {
     const toast = document.getElementById("toast-interactive");
     if (toast) {
@@ -14,10 +15,14 @@ const showVideo = () => {
         });
     }
 };
-(() => {
-    showToast();
-    showVideo();
-})();
+/**
+ * Renderiza los productos en el contenedor correspondiente.
+ * Obtiene los productos de la API, procesa los primeros 6 y los muestra
+ * en formato de tarjetas con información relevante.
+ * 
+ * @function renderProducts
+ * @returns {void}
+ */
 let renderProducts = () => {
     fetchProducts("https://data-dawm.github.io/datum/reseller/products.json")
         .then(result => {
@@ -46,12 +51,14 @@ let renderProducts = () => {
            </div>
        </div>
    </div>`;
+                    productHTML = productHTML.replaceAll("[PRODUCT.TITLE]", product.title.length > 20 ? product.title.substring(0, 20) + "..." : product.title);
+                    productHTML = productHTML.replaceAll("[PRODUCT.PRICE]", product.price);
+                    productHTML = productHTML.replaceAll("[PRODUCT.IMGURL]", product.imgUrl);
+                    productHTML = productHTML.replaceAll("[PRODUCT.PRODUCTURL]", product.productURL);
+                    productHTML = productHTML.replaceAll("[PRODUCT.CATEGORY_ID]", product.category_id);
+                    container.innerHTML += productHTML;
                 });
-                productHTML = productHTML.replaceAll("[PRODUCT.TITLE]", product.title.length > 20 ? product.title.substring(0, 20) + "..." : product.title);
-                productHTML = productHTML.replaceAll("[PRODUCT.PRICE]", product.price);
-                productHTML = productHTML.replaceAll("[PRODUCT.IMGURL]", product.imgurl);
-                productHTML = productHTML.replaceAll("[PRODUCT.CATEGORY_ID]", product.category_id);
-                container.innerHTML += productHTML;
+
             }
             else {
                 throw new Error("Error en fetchProducts:");
@@ -62,4 +69,52 @@ let renderProducts = () => {
         });
 }
 
-export { fetchProducts }
+export { renderProducts }
+/**
+ * Renderiza las categorías en el elemento select correspondiente.
+ * Obtiene las categorías desde un archivo XML, procesa la información
+ * y genera las opciones del dropdown.
+ * 
+ * @async
+ * @function renderCategories
+ * @returns {Promise<void>}
+ */
+let renderCategories = async () => {
+    try {
+        let result = await fetchCategories('https://data-dawm.github.io/datum/reseller/categories.xml');
+        
+        if (result.success) {
+            let container = document.getElementById("categories");
+            container.innerHTML = `<option selected disabled>Seleccione una categoría</option>`;
+            
+            let categoriesXML = result.body;
+            let categories = categoriesXML.getElementsByTagName('category');
+            
+            for (let category of categories) {
+                let id = category.getElementsByTagName('id')[0].textContent;
+                let name = category.getElementsByTagName('name')[0].textContent;
+                
+                let categoryHTML = `<option value="${id}">${name}</option>`;
+                container.innerHTML += categoryHTML;
+            }
+        }
+        else {
+            alert("Error en la carga de categorías");
+        }
+    } catch (error) {
+        alert('Error al cargar categorías: ' + error.message);
+    }
+}
+/**
+ * Función de autoejecución que inicializa la aplicación.
+ * Llama a las funciones de renderizado de productos y categorías.
+ * 
+ * @function
+ * @returns {void}
+ */
+(() => {
+    showToast();
+    showVideo();
+    renderProducts();
+    renderCategories();
+})();
