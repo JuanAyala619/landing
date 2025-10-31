@@ -1,6 +1,7 @@
 "use strict";
 // Importar las funciones desde functions.js
 import { fetchProducts,fetchCategories } from './functions.js';
+import { saveVote } from './firebase.js';
 const showToast = () => {
     const toast = document.getElementById("toast-interactive");
     if (toast) {
@@ -112,9 +113,28 @@ let renderCategories = async () => {
  * @function
  * @returns {void}
  */
+let enableForm =()=>{
+    const form=document.getElementById("form_voting");
+    if(form){
+        form.addEventListener("submit",(event)=>{
+            event.preventDefault();
+            const productId=document.getElementById("select_product").value;
+            saveVote(productId)
+                .then(response=>{
+                    if(response.status){
+                        alert(response.message);
+                    }
+                    else{
+                        alert(response.message);
+                    }
+                });
+        });
+    }
+}
 (() => {
     showToast();
     showVideo();
     renderProducts();
     renderCategories();
+    enableForm();
 })();
