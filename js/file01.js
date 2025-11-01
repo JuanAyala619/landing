@@ -1,7 +1,7 @@
 "use strict";
 // Importar las funciones desde functions.js
-import { fetchProducts,fetchCategories } from './functions.js';
-import { saveVote } from './firebase.js';
+import { fetchProducts, fetchCategories } from './functions.js';
+import { saveVote, getVotes } from './firebase.js';
 const showToast = () => {
     const toast = document.getElementById("toast-interactive");
     if (toast) {
@@ -83,18 +83,18 @@ export { renderProducts }
 let renderCategories = async () => {
     try {
         let result = await fetchCategories('https://data-dawm.github.io/datum/reseller/categories.xml');
-        
+
         if (result.success) {
             let container = document.getElementById("categories");
             container.innerHTML = `<option selected disabled>Seleccione una categoría</option>`;
-            
+
             let categoriesXML = result.body;
             let categories = categoriesXML.getElementsByTagName('category');
-            
+
             for (let category of categories) {
                 let id = category.getElementsByTagName('id')[0].textContent;
                 let name = category.getElementsByTagName('name')[0].textContent;
-                
+
                 let categoryHTML = `<option value="${id}">${name}</option>`;
                 container.innerHTML += categoryHTML;
             }
@@ -113,22 +113,68 @@ let renderCategories = async () => {
  * @function
  * @returns {void}
  */
-let enableForm =()=>{
-    const form=document.getElementById("form_voting");
-    if(form){
-        form.addEventListener("submit",(event)=>{
+let enableForm = () => {
+    const form = document.getElementById("form_voting");
+    if (form) {
+        form.addEventListener("submit", (event) => {
             event.preventDefault();
-            const productId=document.getElementById("select_product").value;
+            const productId = document.getElementById("select_product").value;
             saveVote(productId)
-                .then(response=>{
-                    if(response.status){
+                .then(response => {
+                    if (response.status) {
                         alert(response.message);
                     }
-                    else{
+                    else {
                         alert(response.message);
                     }
                 });
         });
+    }
+}
+let displayVotes = async () => {
+    try {
+        const votesResult = await getVotes();
+        if (votesResult.status) {
+            const votes = votesResult.data;
+            const resultsContainer = document.getElementById('results');
+            let tableHTML = `
+    <table class="min-w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-500">
+        <thead>
+            <tr class="bg-gray-100 dark:bg-gray-600">
+                <th class="py-2 px-4 border-b border-gray-300 dark:border-gray-500 text-left text-gray-900 dark:text-white">Producto Votado</th>
+                <th class="py-2 px-4 border-b border-gray-300 dark:border-gray-500 text-left text-gray-900 dark:text-white">Total de Votos</th>
+            </tr>
+        </thead>
+        <tbody>
+`;
+            const voteCount = {};
+            Object.values(votes).forEach(vote => {
+                const productId = vote.productId;
+                voteCount[productId] = (voteCount[productId] || 0) + 1;
+            });
+            Object.entries(voteCount).forEach(([productId, count]) => {
+                tableHTML += `
+    <tr class="hover:bg-gray-50 dark:hover:bg-gray-600">
+        <td class="py-2 px-4 border-b border-gray-300 dark:border-gray-500 text-gray-800 dark:text-gray-200">Producto ${productId}</td>
+        <td class="py-2 px-4 border-b border-gray-300 dark:border-gray-500 text-gray-800 dark:text-gray-200">${count}</td>
+    </tr>
+`;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            resultsContainer.innerHTML = tableHTML;
+        }
+        else {
+            document.getElementById('results').innerHTML = '<p>No hay votos registrados</p>';
+        }
+    }
+    catch (error) {
+        console.error('Error al mostrar votos:', error);
+        document.getElementById('results').innerHTML = '<p>Error al cargar los votos</p>';
     }
 }
 (() => {
@@ -137,4 +183,5 @@ let enableForm =()=>{
     renderProducts();
     renderCategories();
     enableForm();
+    displayVotes();
 })();
